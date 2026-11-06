@@ -35,6 +35,23 @@
   .ctl kbd { font: 700 11px ui-monospace, Consolas, monospace; background: #fff; color: #111; border-radius: 4px; padding: 3px 6px; white-space: nowrap; justify-self: end; }
   .btn { font-weight: 800; font-size: 18px; font-family: inherit; color: #fff; background: #ff3b3b; border: 0; border-radius: 999px; padding: 14px 44px; cursor: pointer; box-shadow: 0 6px 24px rgba(255,59,59,.4); }
   .btn:active { transform: scale(.97); }
+  .btn.ghost { background: transparent; border: 2px solid rgba(255,255,255,.45); box-shadow: none; font-size: 15px; padding: 11px 26px; }
+  .btnRow { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 18px; }
+  .card.wide { max-width: 760px; width: 100%; }
+  #stageList { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; text-align: left; }
+  .stage { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18); border-radius: 12px; padding: 12px 14px; cursor: pointer; color: #fff; font-family: inherit; text-align: left; transition: background .15s, border-color .15s; }
+  .stage:hover { background: rgba(255,59,59,.18); border-color: #ff3b3b; }
+  .stage .s-sub { font: 600 11px ui-monospace, Consolas, monospace; letter-spacing: .2em; color: #ff3b3b; }
+  .stage .s-name { font-size: 18px; font-weight: 900; margin: 2px 0 4px; }
+  .stage .s-desc { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.5; min-height: 3em; }
+  .stage .s-best { font: 12px ui-monospace, Consolas, monospace; color: #ffd34d; margin-top: 6px; }
+  .stage.locked { opacity: .4; cursor: not-allowed; }
+  .stage.locked:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); }
+  #clearTime { font: 800 34px ui-monospace, Consolas, monospace; margin: 8px 0 2px; }
+  #clearBest { font: 13px ui-monospace, Consolas, monospace; color: #ffd34d; min-height: 1.2em; }
+  #stageName { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); font-size: 13px; font-weight: 800; letter-spacing: .06em; pointer-events: none; text-shadow: 0 1px 6px rgba(0,0,0,.5); white-space: nowrap; }
+  #stageName span { font: 600 11px ui-monospace, Consolas, monospace; letter-spacing: .2em; color: #ff3b3b; margin-right: 8px; }
+  @media (max-width: 720px) { #stageName { left: auto; right: 14px; transform: none; top: 44px; font-size: 12px; } }
   .note { font-size: 11px; color: rgba(255,255,255,.45); margin-top: 14px; line-height: 1.6; }
   .ver { font: 11px ui-monospace, Consolas, monospace; color: rgba(255,255,255,.35); margin-top: 8px; }
   .pc-only, .touch-only { display: none; }
@@ -65,11 +82,12 @@
   <div class="panel" id="stats">SPD 0.0 m/s<br>ALT 0.0 m</div>
 </div>
 <div id="timer">00:00.00</div>
+<div id="stageName"></div>
 <div id="crosshair"></div>
 <div id="help">
   <b>WASD</b> 移動　<b>Shift</b> ダッシュ　<b>Space</b> ジャンプ　<b>Ctrl / C</b> スライディング<br>
   斜めの壁に向かって歩く → <b>壁歩き</b>　／　直立の壁へジャンプ → <b>フラグ1</b><br>
-  フラグ1中に近くの壁へ向けてジャンプ → <b>壁蹴り</b>（壁の上端付近で壁方向＋ジャンプ → よじ登り）　<b>R</b> リスタート
+  フラグ1中に近くの壁へ向けてジャンプ → <b>壁蹴り</b>（壁の上端付近で壁方向＋ジャンプ → よじ登り）　<b>R</b> 最初から
 </div>
 <div id="toast"></div>
 
@@ -105,7 +123,7 @@
     </div>
     <button class="btn" id="startBtn">スタート</button>
     <div class="note pc-only" style="display:block">ゲーム中は全画面になり、Ctrl+W などのブラウザショートカットを無効化します（Chrome / Edge）。<br>Esc で一時停止。</div>
-    <div class="ver">v1.0.0</div>
+    <div class="ver">v1.1.0</div>
   </div>
 </div>
 
@@ -113,8 +131,36 @@
   <div class="card">
     <div class="kicker">PAUSED</div>
     <h1 style="font-size:36px">一時停止中</h1>
-    <p class="yomi">クリック / タップで再開</p>
-    <button class="btn" id="resumeBtn">再開</button>
+    <p class="yomi" id="pauseStage"></p>
+    <div class="btnRow">
+      <button class="btn" id="resumeBtn">再開</button>
+      <button class="btn ghost" id="retryBtn">最初から</button>
+      <button class="btn ghost" id="toSelectBtn">ステージ選択</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="select" style="display:none">
+  <div class="card wide">
+    <div class="kicker">STAGE SELECT</div>
+    <h1 style="font-size:34px">ステージ選択</h1>
+    <div class="yomi">クリアすると次のステージが開く。落ちたら最後に踏んだチェックポイントから</div>
+    <div id="stageList"></div>
+    <button class="btn ghost" id="backTitleBtn" style="margin-top:18px">タイトルへ</button>
+  </div>
+</div>
+
+<div class="overlay" id="clear" style="display:none">
+  <div class="card">
+    <div class="kicker" id="clearSub">STAGE CLEAR</div>
+    <h1 style="font-size:40px">クリア！</h1>
+    <div id="clearTime"></div>
+    <div id="clearBest"></div>
+    <div class="btnRow">
+      <button class="btn" id="nextBtn">次のステージ</button>
+      <button class="btn ghost" id="againBtn">もう一度</button>
+      <button class="btn ghost" id="clearSelectBtn">ステージ選択</button>
+    </div>
   </div>
 </div>
 
@@ -128,8 +174,6 @@ const G = 28;              // 重力
 const R = 0.45;            // 当たり判定の球の半径
 const H = 1.75;            // 立ち状態の高さ
 const KICK_RANGE = 11;     // 壁蹴りで届く距離
-const SPAWN = new V3(0, 0, 10);
-const GOAL = new V3(0, 22, -64);
 
 const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 document.body.classList.add(isTouch ? 'touch' : 'pc');
@@ -165,6 +209,12 @@ addEventListener('resize', () => {
 const colliders = [];    // { m, inv, q, h }
 const solidMeshes = [];
 const COL = { floor: 0xdfe4ea, plat: 0xf4f6f9, wall: 0x4f78ff, slope: 0xff8a3d, bar: 0x2b2f38, tower: 0x8a94a6 };
+const stageGroup = new THREE.Group(); scene.add(stageGroup);
+const SPAWN = new V3(); let spawnYaw = 0;
+const GOAL = new V3();
+const respawnPt = new V3(); let respawnYaw = 0;
+let checkpoints = [];
+const KILL_Y = -25;
 
 function addBox(w, h, d, x, y, z, o = {}) {
   const mat = new THREE.MeshStandardMaterial({ color: o.color ?? COL.plat, roughness: 0.85, metalness: 0.0 });
@@ -172,88 +222,54 @@ function addBox(w, h, d, x, y, z, o = {}) {
   m.position.set(x, y, z);
   m.rotation.set(o.rx || 0, o.ry || 0, 0, 'YXZ');
   m.castShadow = o.shadow !== false; m.receiveShadow = true;
-  scene.add(m);
+  stageGroup.add(m);
   m.updateMatrixWorld(true);
   colliders.push({ m, inv: m.matrixWorld.clone().invert(), q: m.quaternion.clone(), h: new V3(w / 2, h / 2, d / 2) });
   solidMeshes.push(m);
   return m;
 }
+// 上面の高さ top で置く足場（中心 x,z・幅 w・奥行き d）
+function plat(x, z, w, d, top, o = {}) { const t = o.t ?? 1; return addBox(w, t, d, x, top - t / 2, z, o); }
 
-// 斜めの壁：足元中心(x,z)から ry 方向の奥へ lean 度だけ倒れた板
-function addSlope(x, z, w, len, leanDeg, ry = 0, color = COL.slope) {
+// 斜めの壁：足元中心(x,z)・足元の高さ baseY から、ry 方向の奥へ lean 度だけ倒れた板
+// 戻り値 top: 手前の面の上端の高さ / reach: 足元から上端までの奥行き
+function addSlope(x, z, w, len, leanDeg, ry = 0, baseY = 0, color = COL.slope) {
   const a = THREE.MathUtils.degToRad(leanDeg);
   const cy = Math.cos(a) * len / 2;
   const off = -Math.sin(a) * len / 2;
-  addBox(w, len, 1, x + off * Math.sin(ry), cy - 0.2, z + off * Math.cos(ry), { rx: -a, ry, color });
-  return { topY: Math.cos(a) * len - 0.2, depth: Math.sin(a) * len };
+  addBox(w, len, 1, x + off * Math.sin(ry), baseY + cy - 0.2, z + off * Math.cos(ry), { rx: -a, ry, color });
+  return {
+    topY: baseY + Math.cos(a) * len - 0.2, depth: Math.sin(a) * len,
+    top: baseY + Math.cos(a) * len - 0.2 + 0.5 * Math.sin(a), reach: Math.sin(a) * len - 0.5 * Math.cos(a),
+  };
 }
 
 // 看板（スプライト）
 function addLabel(text, x, y, z, color = '#111') {
   const c = document.createElement('canvas'); c.width = 512; c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(4, 4, 504, 120, 24); g.fill();
-  g.fillStyle = color; g.font = '900 56px "Yu Gothic UI","Hiragino Sans",sans-serif';
-  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 256, 68);
+  g.font = '900 56px "Yu Gothic UI","Hiragino Sans",sans-serif';
+  const tw = Math.min(500, g.measureText(text).width + 60);
+  g.fillStyle = 'rgba(255,255,255,.92)'; g.beginPath(); g.roundRect(256 - tw / 2, 4, tw, 120, 24); g.fill();
+  g.fillStyle = color; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(text, 256, 68, 480);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthWrite: false }));
-  s.scale.set(6, 1.5, 1); s.position.set(x, y, z); scene.add(s);
+  s.scale.set(6, 1.5, 1); s.position.set(x, y, z); stageGroup.add(s);
 }
 
-// --- 床 ---
-addBox(220, 1, 220, 0, -0.5, 0, { color: COL.floor, shadow: false });
-const grid = new THREE.GridHelper(220, 110, 0xb5bdc8, 0xc9d0d9); grid.position.y = 0.01; scene.add(grid);
-
-// --- スタート付近の足場 ---
-addBox(3, 1, 3, -4, 0.5, 4);
-addBox(3, 2, 3, -7, 1, 1);
-addBox(3, 3, 3, -4, 1.5, -2);
-addLabel('START', 0, 3.2, 14, '#ff3b3b');
-
-// --- 壁歩きゾーン（東） ---
-addLabel('壁歩きゾーン', 15, 4, -6, '#ff6a1a');
-{
-  const s1 = addSlope(9, -12, 6, 10, 20);
-  addBox(6, 1, 6, 9, s1.topY - 0.5, -12 - s1.depth - 3);
-  const s2 = addSlope(17, -12, 6, 12, 32);
-  addBox(6, 1, 6, 17, s2.topY - 0.5, -12 - s2.depth - 3);
-  addBox(2, 0.6, 2 + Math.abs(s1.depth - s2.depth) + 6, 13, Math.min(s1.topY, s2.topY) - 0.3, -12 - (s1.depth + s2.depth) / 2 - 3);
-  const s3 = addSlope(26, -2, 8, 15, 28, -Math.PI / 2);
-  addBox(6, 1, 10, 26 + s3.depth + 3, s3.topY - 0.5, -2);
-  addSlope(34, 14, 6, 9, 40, Math.PI); // 逆向き（北から南へ倒れる）
+function setSpawn(x, y, z, yaw = 0) { SPAWN.set(x, y, z); spawnYaw = yaw; }
+function setGoal(x, y, z) { GOAL.set(x, y, z); goalGroup.position.copy(GOAL); }
+const CP_OFF = 0x7fd1ff, CP_ON = 0x5be37d;
+function checkpoint(x, y, z, yaw = 0) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(2, 2, 0.08, 32), new THREE.MeshStandardMaterial({ color: CP_OFF, emissive: 0x0c2a3a }));
+  m.position.set(x, y + 0.04, z); m.receiveShadow = true; stageGroup.add(m);
+  checkpoints.push({ pos: new V3(x, y, z), yaw, m, reached: false });
 }
 
-// --- スライディングゾーン（南東） ---
-addLabel('スライディング', 14, 3.4, 8, '#2b2f38');
-for (let i = 0; i < 3; i++) {
-  const z = 12 + i * 5;
-  addBox(7, 0.6, 0.6, 14, 1.35, z, { color: COL.bar });
-  addBox(0.5, 1.65, 0.5, 10.25, 0.83, z, { color: COL.bar });
-  addBox(0.5, 1.65, 0.5, 17.75, 0.83, z, { color: COL.bar });
-}
-addBox(7, 0.5, 14, 14, 1.05 + 0.25 + 0.3, 30, { color: COL.bar }); // 低いトンネル
-addBox(0.5, 1.6, 14, 10.25, 0.8, 30, { color: COL.bar });
-addBox(0.5, 1.6, 14, 17.75, 0.8, 30, { color: COL.bar });
-
-// --- 壁蹴り回廊（西） ---
-addLabel('壁蹴り回廊', -15, 4, -1, '#2f5bff');
-addBox(1, 16, 10, -12, 8, -8, { color: COL.wall });
-addBox(1, 16, 10, -18, 8, -8, { color: COL.wall });
-addBox(7, 1, 6, -15, 15.5, -16, { color: COL.plat });
-// 西の練習壁（向かい合わない単独壁）
-addBox(8, 6, 1, -26, 3, 2, { color: COL.wall });
-addBox(1, 9, 8, -32, 4.5, -6, { color: COL.wall });
-
-// --- ジグザグ壁蹴り → ゴールタワー（北） ---
-addLabel('ジグザグ → GOAL', 0, 4, -24, '#ff3b3b');
-for (let i = 0; i < 6; i++) {
-  const x = i % 2 ? 3.5 : -3.5;
-  const h = 6 + i * 3;
-  addBox(1, h, 5, x, h / 2, -32 - i * 4.5, { color: COL.wall });
-}
-addBox(7, 22, 5, 0, 11, -64, { color: COL.tower });
-addBox(1, 22, 8, -5, 11, -60, { color: COL.wall });
-addBox(1, 22, 8, 5, 11, -60, { color: COL.wall });
+// 奈落ステージ用の見た目だけの床
+const voidPlane = new THREE.Mesh(new THREE.PlaneGeometry(800, 800), new THREE.MeshBasicMaterial({ color: 0x24304f }));
+voidPlane.rotation.x = -Math.PI / 2; voidPlane.position.y = -45; scene.add(voidPlane);
 
 // ゴールの旗
 const goalGroup = new THREE.Group();
@@ -265,8 +281,210 @@ const goalGroup = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.TorusGeometry(1.6, 0.06, 8, 48), new THREE.MeshBasicMaterial({ color: 0xffd34d }));
   ring.rotation.x = Math.PI / 2; ring.position.y = 0.08;
   goalGroup.add(pole, flagM, ring);
-  goalGroup.position.copy(GOAL);
   scene.add(goalGroup);
+}
+
+// ---------- ステージ一覧 ----------
+const STAGES = [
+  {
+    id: 'training', sub: 'TRAINING', name: '練習場', floor: true,
+    desc: '床のある広場。すべての動きを自由に試せる',
+    build() {
+      setSpawn(0, 0, 10, 0); setGoal(0, 22, -64);
+      addBox(3, 1, 3, -4, 0.5, 4);
+      addBox(3, 2, 3, -7, 1, 1);
+      addBox(3, 3, 3, -4, 1.5, -2);
+      addLabel('START', 0, 3.2, 14, '#ff3b3b');
+      // 壁歩きゾーン（東）
+      addLabel('壁歩きゾーン', 15, 4, -6, '#ff6a1a');
+      const s1 = addSlope(9, -12, 6, 10, 20);
+      addBox(6, 1, 6, 9, s1.topY - 0.5, -12 - s1.depth - 3);
+      const s2 = addSlope(17, -12, 6, 12, 32);
+      addBox(6, 1, 6, 17, s2.topY - 0.5, -12 - s2.depth - 3);
+      addBox(2, 0.6, 2 + Math.abs(s1.depth - s2.depth) + 6, 13, Math.min(s1.topY, s2.topY) - 0.3, -12 - (s1.depth + s2.depth) / 2 - 3);
+      const s3 = addSlope(26, -2, 8, 15, 28, -Math.PI / 2);
+      addBox(6, 1, 10, 26 + s3.depth + 3, s3.topY - 0.5, -2);
+      addSlope(34, 14, 6, 9, 40, Math.PI);
+      // スライディングゾーン（南東）
+      addLabel('スライディング', 14, 3.4, 8, '#2b2f38');
+      for (let i = 0; i < 3; i++) {
+        const z = 12 + i * 5;
+        addBox(7, 0.6, 0.6, 14, 1.35, z, { color: COL.bar });
+        addBox(0.5, 1.65, 0.5, 10.25, 0.83, z, { color: COL.bar });
+        addBox(0.5, 1.65, 0.5, 17.75, 0.83, z, { color: COL.bar });
+      }
+      addBox(7, 0.5, 14, 14, 1.6, 30, { color: COL.bar });
+      addBox(0.5, 1.6, 14, 10.25, 0.8, 30, { color: COL.bar });
+      addBox(0.5, 1.6, 14, 17.75, 0.8, 30, { color: COL.bar });
+      // 壁蹴り回廊（西）
+      addLabel('壁蹴り回廊', -15, 4, -1, '#2f5bff');
+      addBox(1, 16, 10, -12, 8, -8, { color: COL.wall });
+      addBox(1, 16, 10, -18, 8, -8, { color: COL.wall });
+      addBox(7, 1, 6, -15, 15.5, -16, { color: COL.plat });
+      addBox(8, 6, 1, -26, 3, 2, { color: COL.wall });
+      addBox(1, 9, 8, -32, 4.5, -6, { color: COL.wall });
+      // ジグザグ壁蹴り → ゴールタワー（北）
+      addLabel('ジグザグ → GOAL', 0, 4, -24, '#ff3b3b');
+      for (let i = 0; i < 6; i++) {
+        const h = 6 + i * 3;
+        addBox(1, h, 5, i % 2 ? 3.5 : -3.5, h / 2, -32 - i * 4.5, { color: COL.wall });
+      }
+      addBox(7, 22, 5, 0, 11, -64, { color: COL.tower });
+      addBox(1, 22, 8, -5, 11, -60, { color: COL.wall });
+      addBox(1, 22, 8, 5, 11, -60, { color: COL.wall });
+    },
+  },
+  {
+    id: 's1', sub: 'STAGE 1', name: 'はじめの一歩',
+    desc: 'ジャンプ・スライディング・ダッシュジャンプ・壁歩き',
+    build() {
+      setSpawn(0, 0, 3, 0);
+      plat(0, 0, 8, 10, 0);
+      addLabel('Space でジャンプ', 0, 3, -5);
+      plat(0, -10, 6, 6, 0);
+      plat(0, -19, 6, 6, 1.2);
+      plat(0, -29, 6, 6, 2.4);
+      checkpoint(0, 2.4, -29);
+      // スライディング
+      plat(0, -45, 6, 22, 2.4);                    // z -34 〜 -56
+      addLabel('Ctrl でスライディング', 0, 6.4, -36);
+      addBox(6, 0.6, 0.6, 0, 2.4 + 1.35, -40, { color: COL.bar });
+      addBox(6, 0.6, 0.6, 0, 2.4 + 1.35, -44, { color: COL.bar });
+      addBox(6, 0.5, 3, 0, 2.4 + 1.3, -47.5, { color: COL.bar }); // 低いトンネル
+      checkpoint(0, 2.4, -52);
+      // ダッシュジャンプ（7m の穴）
+      addLabel('Shift でダッシュジャンプ', 0, 6, -56);
+      plat(0, -68, 6, 10, 2.4);                    // z -63 〜 -73
+      // 壁歩きで登る
+      addLabel('斜めの壁に向かって歩く', 0, 7, -66);
+      const s = addSlope(0, -73, 6, 9, 30, 0, 2.4);
+      plat(0, -73 - s.reach - 4, 6, 8, s.top);
+      setGoal(0, s.top, -73 - s.reach - 5);
+    },
+  },
+  {
+    id: 's2', sub: 'STAGE 2', name: '斜めの壁',
+    desc: '壁歩きで登る・空中から斜めの壁へ飛びつく・斜めの壁を横に渡る',
+    build() {
+      setSpawn(0, 0, 2, 0);
+      plat(0, 0, 8, 8, 0);
+      const a = addSlope(0, -4, 6, 10, 25);
+      let z = -4 - a.reach;
+      plat(0, z - 3, 6, 6, a.top);
+      checkpoint(0, a.top, z - 3);
+      // 空中から斜めの壁へ
+      addLabel('跳んで斜めの壁へ', 0, a.top + 3.5, z - 1);
+      const bz = z - 6 - 2;
+      const b = addSlope(0, bz, 6, 14, 30, 0, a.top - 5);
+      z = bz - b.reach;
+      plat(0, z - 4, 6, 8, b.top);
+      checkpoint(0, b.top, z - 4);
+      // 横に長い斜めの壁を右へ渡る
+      addLabel('右へ渡れ →', 4, b.top + 3.5, z - 7);
+      const cz = z - 8 - 2;
+      const cBase = b.top - 4;
+      addSlope(9, cz, 22, 12, 30, 0, cBase);
+      // 渡った先の足場（斜めの壁の右端の横）
+      const h = 6.7, pTop = cBase + h + 0.05, pz = cz + 0.43 - h * Math.tan(Math.PI / 6);
+      plat(23.5, pz, 6, 10, pTop);
+      checkpoint(23.5, pTop, pz);
+      // 最後は急な斜めの壁
+      const dz = pz - 5;
+      const d = addSlope(23.5, dz, 6, 10, 40, 0, pTop);
+      plat(23.5, dz - d.reach - 4, 6, 8, d.top);
+      setGoal(23.5, d.top, dz - d.reach - 5);
+    },
+  },
+  {
+    id: 's3', sub: 'STAGE 3', name: '壁蹴りの塔',
+    desc: '向かい合う壁を蹴って登る・壁の上端でよじ登る',
+    build() {
+      setSpawn(0, 0, 8, 0);
+      plat(0, 0, 16, 24, 0);                                   // z 12 〜 -12
+      addLabel('壁へジャンプ → フラグ1 → 反対の壁へジャンプ', 0, 4, -1.5);
+      addBox(1, 14, 8, -3, 7, -8, { color: COL.wall });
+      addBox(1, 14, 8, 3, 7, -8, { color: COL.wall });
+      addBox(8, 14, 6, 0, 7, -15, { color: COL.tower });     // 上端で W + ジャンプでよじ登り
+      addLabel('上で W + ジャンプ → よじ登り', 0, 16.5, -12.5);
+      checkpoint(0, 14, -16);
+      // 奈落の上の回廊：ななめ前へ壁蹴りして進む
+      addLabel('ななめ前の壁へ壁蹴り', 0, 17, -19);
+      addBox(1, 16, 20, -3, 14, -30, { color: COL.wall });   // z -20 〜 -40、y 6 〜 22
+      addBox(1, 16, 20, 3, 14, -30, { color: COL.wall });
+      addBox(8, 12, 6, 0, 10, -45, { color: COL.tower });    // z -42 〜 -48、上面 16
+      addLabel('正面の塔へ W + ジャンプ', 0, 20, -41);
+      checkpoint(0, 16, -45);
+      // 最後の縦穴
+      addLabel('登りきれ', 0, 19.5, -48.5);
+      addBox(1, 14, 6, -3, 21, -51, { color: COL.wall });    // y 14 〜 28
+      addBox(1, 14, 6, 3, 21, -51, { color: COL.wall });
+      addBox(8, 16, 6, 0, 20, -57, { color: COL.tower });    // 上面 28
+      setGoal(0, 28, -57);
+    },
+  },
+  {
+    id: 's4', sub: 'STAGE 4', name: 'ジグザグ渓谷',
+    desc: '奈落の上で左右の壁を蹴りながら前へ進む',
+    build() {
+      setSpawn(0, 6, 2, 0);
+      plat(0, 0, 8, 8, 6);                                     // z 4 〜 -4
+      addLabel('ジグザグに壁蹴り', 0, 9.5, -3.5);
+      for (let i = 0; i < 4; i++) addBox(1, 22, 4, i % 2 ? 3.5 : -3.5, 1, -8 - i * 5, { color: COL.wall });
+      addBox(6, 6, 6, 0, 5, -30, { color: COL.tower });       // 上面 8、z -27 〜 -33
+      checkpoint(0, 8, -30);
+      for (let i = 0; i < 4; i++) addBox(1, 22, 4, i % 2 ? 3.5 : -3.5, 1, -38 - i * 5, { color: COL.wall });
+      addBox(8, 8, 8, 0, 4, -62, { color: COL.tower });       // 上面 8、z -58 〜 -66
+      setGoal(0, 8, -62);
+    },
+  },
+  {
+    id: 's5', sub: 'STAGE 5', name: '総仕上げ',
+    desc: 'これまでの動きを全部つなげる',
+    build() {
+      setSpawn(0, 0, 3, 0);
+      plat(0, -12, 6, 34, 0);                                  // z 5 〜 -29
+      addBox(6, 0.6, 0.6, 0, 1.35, -9, { color: COL.bar });
+      addBox(6, 0.6, 0.6, 0, 1.35, -13, { color: COL.bar });
+      addBox(6, 0.5, 4, 0, 1.3, -18, { color: COL.bar });      // z -16 〜 -20
+      plat(0, -41, 6, 10, 0);                                  // z -36 〜 -46（7m の穴）
+      checkpoint(0, 0, -41);
+      const s = addSlope(0, -46, 6, 12, 30);
+      const z = -46 - s.reach;
+      plat(0, z - 4, 8, 8, s.top);
+      checkpoint(0, s.top, z - 4);
+      // ジグザグ → 塔
+      const z0 = z - 8;
+      for (let i = 0; i < 4; i++) addBox(1, 18, 4, i % 2 ? 3.5 : -3.5, s.top - 3, z0 - 4 - i * 5, { color: COL.wall });
+      const tz = z0 - 4 - 3 * 5 - 9;
+      const tTop = s.top + 3;
+      addBox(8, 12, 6, 0, tTop - 6, tz, { color: COL.tower });
+      addLabel('塔の正面で W + ジャンプ', 0, tTop + 3, tz + 3);
+      setGoal(0, tTop, tz);
+    },
+  },
+];
+
+let stageIdx = 0;
+function clearStage() {
+  for (const c of [...stageGroup.children]) {
+    stageGroup.remove(c);
+    c.traverse(o => {
+      if (o.geometry) o.geometry.dispose();
+      if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); }
+    });
+  }
+  colliders.length = 0; solidMeshes.length = 0; checkpoints = [];
+}
+function buildStage(i) {
+  clearStage();
+  stageIdx = i;
+  const st = STAGES[i];
+  if (st.floor) {
+    addBox(220, 1, 220, 0, -0.5, 0, { color: COL.floor, shadow: false });
+    const grid = new THREE.GridHelper(220, 110, 0xb5bdc8, 0xc9d0d9); grid.position.y = 0.01; stageGroup.add(grid);
+  }
+  voidPlane.visible = !st.floor;
+  st.build();
 }
 
 // ================= プレイヤーの見た目 =================
@@ -468,6 +686,7 @@ function canStand() {
 
 // ================= 壁蹴りの相手を探す =================
 const ray = new THREE.Raycaster();
+const _bb = new THREE.Box3();
 function findKickTarget(prefer) {
   const n = P.wallN;
   _o.set(P.pos.x, P.pos.y + 1.0, P.pos.z);
@@ -486,7 +705,13 @@ function findKickTarget(prefer) {
     const hn = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
     if (Math.abs(hn.y) > 0.25 || hn.dot(_rd) > -0.25) continue; // 直立していて、こちらを向いた面だけ
     const sc = pd * 2 - hit.distance * 0.05;
-    if (sc > bs) { bs = sc; best = { point: hit.point.clone(), normal: hn.setY(0).normalize(), dist: hit.distance }; }
+    if (sc > bs) {
+      bs = sc;
+      // 相手の壁の上端を飛び越えないように、上がる高さを上端より下に抑える
+      const top = _bb.setFromObject(hit.object).max.y;
+      const rise = Math.max(-3, Math.min(2.2, top - 1.5 - P.pos.y));
+      best = { point: hit.point.clone(), normal: hn.setY(0).normalize(), dist: hit.distance, rise };
+    }
   }
   return best;
 }
@@ -494,7 +719,7 @@ function findKickTarget(prefer) {
 // よじ登れる縁があるか（壁の上端付近）
 function ledgeAhead() {
   const n = P.wallN;
-  _o.set(P.pos.x, P.pos.y + 2.3, P.pos.z);
+  _o.set(P.pos.x, P.pos.y + 2.0, P.pos.z);
   ray.set(_o, _rd.copy(n).negate()); ray.far = 1.4;
   if (ray.intersectObjects(solidMeshes, false).length) return false;
   _o.set(P.pos.x - n.x * 0.9, P.pos.y + 3.2, P.pos.z - n.z * 0.9);
@@ -509,10 +734,10 @@ function wallKick(w, has) {
   const n = P.wallN;
   const prefer = has ? _p.copy(w).normalize() : _p.copy(n);
   P.state = 'move'; P.jumped = true; P.onGround = false;
-  P.lockCol = P.wallCol; P.lockT = 0.22;
+  P.lockCol = P.wallCol; P.lockT = Infinity;   // 地面か別の壁に触れるまで同じ壁には戻れない
   // 壁の方向へ入力していて、上端が近い → よじ登り
   if ((!has || prefer.dot(n) < -0.3) && ledgeAhead()) {
-    P.vel.set(-n.x * 3.2, 10.5, -n.z * 3.2); P.kickT = 0; P.lockT = 0.5;
+    P.vel.set(-n.x * 2.6, 11, -n.z * 2.6); P.kickT = 0;
     toast('よじ登り', '', 500);
     return;
   }
@@ -521,7 +746,7 @@ function wallKick(w, has) {
     const tx = t.point.x + t.normal.x * (R + 0.1), tz = t.point.z + t.normal.z * (R + 0.1);
     const dx = tx - P.pos.x, dz = tz - P.pos.z, d = Math.hypot(dx, dz);
     const T = THREE.MathUtils.clamp(d / 17, 0.2, 0.75);
-    const rise = 2.2;
+    const rise = t.rise;
     P.vel.set(dx / T, rise / T + 0.5 * G * T, dz / T);
     P.kickT = T + 0.15;
   } else {
@@ -564,12 +789,14 @@ function step(dt) {
     const down = Math.min(0.25 + P.flagT * 0.9, 5);
     P.vel.set(_d.x * slow, -down, _d.z * slow).addScaledVector(n, -2);
     if (P.jumpBuf > 0) { P.jumpBuf = 0; wallKick(w, has); }
-    else if (P.slideBuf > 0) { P.slideBuf = 0; P.state = 'move'; P.vel.addScaledVector(n, 4); P.lockCol = P.wallCol; P.lockT = 0.35; }
+    else if (P.slideBuf > 0) { P.slideBuf = 0; P.state = 'move'; P.vel.addScaledVector(n, 4); P.lockCol = P.wallCol; P.lockT = Infinity; }
   } else if (P.state === 'slide') {
     // ---- スライディング ----
     P.slideT -= dt;
     const hs = Math.hypot(P.vel.x, P.vel.z);
-    const ns = hs * Math.exp(-1.3 * dt);
+    const standOK = canStand();
+    let ns = hs * Math.exp(-1.3 * dt);
+    if (!standOK && ns < 3.5) ns = 3.5;   // 低い天井の下では這って進み続ける
     if (hs > 0.01) {
       let a = Math.atan2(P.vel.x, P.vel.z);
       if (has) {
@@ -579,10 +806,10 @@ function step(dt) {
       P.vel.x = Math.sin(a) * ns; P.vel.z = Math.cos(a) * ns;
     }
     P.vel.y -= G * dt;
-    if (P.jumpBuf > 0 && (P.onGround || P.coyote > 0) && canStand()) {
+    if (P.jumpBuf > 0 && (P.onGround || P.coyote > 0) && standOK) {
       P.jumpBuf = 0; P.vel.y = 9.5; P.vel.x *= 1.08; P.vel.z *= 1.08;
       P.state = 'move'; P.jumped = true; P.onGround = false; P.coyote = 0;
-    } else if ((P.slideT <= 0 || ns < 3) && canStand()) P.state = 'move';
+    } else if ((P.slideT <= 0 || ns < 3) && standOK) P.state = 'move';
   } else {
     // ---- 通常移動 ----
     const top = dash ? 13 : 7.5;
@@ -592,9 +819,11 @@ function step(dt) {
       P.vel.z += (w.z * top - P.vel.z) * k;
       if (P.slideBuf > 0) {
         const hs = Math.hypot(P.vel.x, P.vel.z);
-        if (hs > 4) {
+        if (hs > 4 || has) {
+          // 止まっていても入力方向へ滑り出せる（壁の前で詰まらないように）
           P.slideBuf = 0; P.state = 'slide'; P.slideT = 1.0;
-          const ns = Math.min(hs * 1.35, 20); P.vel.x *= ns / hs; P.vel.z *= ns / hs;
+          if (hs > 4) { const ns = Math.min(Math.max(hs * 1.35, 9), 20); P.vel.x *= ns / hs; P.vel.z *= ns / hs; }
+          else { P.vel.x = w.x / mag * 9; P.vel.z = w.z / mag * 9; }
         }
       }
     } else if (P.kickT <= 0) {
@@ -622,7 +851,7 @@ function step(dt) {
     else if (ny > -0.25) { if (!v || c.n.dot(_pre) < v.n.dot(_pre)) v = c; }
   }
   P.onGround = !!g;
-  if (g) { P.coyote = 0.1; P.jumped = false; P.kickT = 0; }
+  if (g) { P.coyote = 0.1; P.jumped = false; P.kickT = 0; P.lockT = 0; }
   const locked = c => P.lockT > 0 && c.col === P.lockCol;
 
   if (P.state === 'wallwalk') {
@@ -642,25 +871,40 @@ function step(dt) {
     if (P.state === 'move' && v && !g && P.jumped && !locked(v)) {
       const into = Math.max(-_pre.dot(v.n), -w.dot(v.n) * 5);
       if (into > 0.5) {
-        P.state = 'flag1'; P.wallN.copy(v.n).setY(0).normalize(); P.wallCol = v.col;
+        P.state = 'flag1'; P.wallN.copy(v.n).setY(0).normalize(); P.wallCol = v.col; P.lockT = 0;
         P.flagT = 0; P.lostT = 0; P.kickT = 0; P.vel.set(0, 0, 0);
         burst(_tmp.set(P.pos.x - P.wallN.x * R, P.pos.y + 0.4, P.pos.z - P.wallN.z * R), P.wallN, 0xff3b3b);
       }
     }
   }
 
-  if (P.pos.y < -25) respawn(false);
+  if (P.pos.y < KILL_Y) { respawn(false); toast('落下', '', 600); return; }
+
+  // チェックポイント
+  for (const cp of checkpoints) {
+    if (cp.reached) continue;
+    if (Math.hypot(P.pos.x - cp.pos.x, P.pos.z - cp.pos.z) < 3.2 && Math.abs(P.pos.y - cp.pos.y) < 2.5) {
+      cp.reached = true; respawnPt.copy(cp.pos); respawnYaw = cp.yaw;
+      cp.m.material.color.setHex(CP_ON); cp.m.material.emissive.setHex(0x0f3a1c);
+      toast('CHECKPOINT', '', 900);
+    }
+  }
 
   // ゴール判定
-  if (!goalDone && P.pos.distanceTo(GOAL) < 2.2) {
-    goalDone = true;
-    toast('GOAL!', `TIME ${fmtTime(elapsed)}　R でもう一度`, 4000);
-  }
+  if (!goalDone && P.pos.distanceTo(GOAL) < 2.2) onGoal();
 }
 
-function respawn(resetTimer) {
-  P.pos.copy(SPAWN); P.vel.set(0, 0, 0); P.state = 'move'; P.jumped = false; P.kickT = 0;
-  if (resetTimer) { startTime = performance.now(); elapsed = 0; goalDone = false; cam.yaw = 0; }
+// resetAll = true で最初から（タイマー・チェックポイントもリセット）
+function respawn(resetAll) {
+  if (resetAll) {
+    respawnPt.copy(SPAWN); respawnYaw = spawnYaw;
+    for (const cp of checkpoints) { cp.reached = false; cp.m.material.color.setHex(CP_OFF); cp.m.material.emissive.setHex(0x0c2a3a); }
+    startTime = performance.now(); elapsed = 0; goalDone = false;
+  }
+  P.pos.copy(respawnPt); P.vel.set(0, 0, 0); P.state = 'move'; P.jumped = false; P.kickT = 0; P.onGround = false;
+  P.upVis.set(0, 1, 0); P.facing.set(-Math.sin(respawnYaw), 0, -Math.cos(respawnYaw));
+  cam.yaw = respawnYaw; cam.pitch = 0.32;
+  camT.set(P.pos.x, P.pos.y + 1.4, P.pos.z);
 }
 
 // ================= 見た目の更新 =================
@@ -715,7 +959,7 @@ function updateVisual(dt) {
   marker.visible = !!kickTarget;
   if (kickTarget) {
     marker.position.copy(kickTarget.point).addScaledVector(kickTarget.normal, 0.05);
-    marker.position.y += 2.2;
+    marker.position.y += kickTarget.rise;
     marker.lookAt(_tmp.copy(marker.position).add(kickTarget.normal));
     const s = 1 + Math.sin(performance.now() / 120) * 0.1; marker.scale.set(s, s, s);
   }
@@ -791,10 +1035,10 @@ async function enterPC() {
   } catch (e) { /* 非対応ブラウザは無視 */ }
   try { renderer.domElement.requestPointerLock(); } catch (e) {}
 }
+function hideOverlays() { for (const el of [elTitle, elPause, elSelect, elClear]) el.style.display = 'none'; }
 function startGame() {
-  elTitle.style.display = 'none'; elPause.style.display = 'none';
+  hideOverlays();
   running = true; document.body.classList.add('playing');
-  if (!startTime) startTime = performance.now();
   if (isTouch) { document.documentElement.requestFullscreen?.().catch(() => {}); }
   else enterPC();
   last = performance.now();
@@ -812,9 +1056,71 @@ function resumeGame() {
   if (pausedAt && !goalDone) startTime += performance.now() - pausedAt;
   pausedAt = 0; startGame();
 }
-document.getElementById('startBtn').addEventListener('click', startGame);
+// ---------- ステージ選択・クリア ----------
+const elSelect = document.getElementById('select'), elClear = document.getElementById('clear');
+const elStageName = document.getElementById('stageName');
+const SAVE_KEY = 'karwak3d_best';
+let best = {};
+try { best = JSON.parse(localStorage.getItem(SAVE_KEY)) || {}; } catch (e) {}
+function isUnlocked(i) { return i <= 1 || best[STAGES[i - 1].id] != null; }
+function stopPlay() {
+  running = false; document.body.classList.remove('playing');
+  for (const k in keys) keys[k] = false;
+  if (document.pointerLockElement) document.exitPointerLock();
+}
+function showSelect() {
+  stopPlay(); hideOverlays();
+  const list = document.getElementById('stageList'); list.innerHTML = '';
+  STAGES.forEach((st, i) => {
+    const b = document.createElement('button');
+    const lock = !isUnlocked(i);
+    b.className = 'stage' + (lock ? ' locked' : '');
+    const bestTxt = best[st.id] != null ? 'BEST ' + fmtTime(best[st.id]) : (lock ? '前のステージをクリアで解放' : '未クリア');
+    b.innerHTML = '<div class="s-sub">' + st.sub + '</div><div class="s-name">' + (lock ? '🔒 ' : '') + st.name +
+      '</div><div class="s-desc">' + st.desc + '</div><div class="s-best">' + bestTxt + '</div>';
+    if (!lock) b.addEventListener('click', () => playStage(i));
+    list.appendChild(b);
+  });
+  elSelect.style.display = 'flex';
+}
+function playStage(i) {
+  buildStage(i);
+  respawn(true);
+  const st = STAGES[i];
+  elStageName.innerHTML = '<span>' + st.sub + '</span>' + st.name;
+  document.getElementById('pauseStage').textContent = st.sub + '　' + st.name;
+  pausedAt = 0;
+  startGame();
+}
+function onGoal() {
+  goalDone = true;
+  elapsed = (performance.now() - startTime) / 1000;
+  const idx = stageIdx, st = STAGES[idx], t = elapsed;
+  const prev = best[st.id];
+  const isNew = prev == null || t < prev;
+  if (isNew) { best[st.id] = t; try { localStorage.setItem(SAVE_KEY, JSON.stringify(best)); } catch (e) {} }
+  toast('GOAL!', '', 1200);
+  setTimeout(() => {
+    if (stageIdx !== idx || !goalDone) return;   // その間に別のステージへ移っていたら出さない
+    stopPlay(); hideOverlays();
+    document.getElementById('clearSub').textContent = st.sub + ' CLEAR';
+    document.getElementById('clearTime').textContent = fmtTime(t);
+    document.getElementById('clearBest').textContent = isNew ? (prev == null ? 'はじめてのクリア！' : 'NEW RECORD!') : 'BEST ' + fmtTime(prev);
+    const next = idx + 1 < STAGES.length ? idx + 1 : -1;
+    const nb = document.getElementById('nextBtn');
+    nb.style.display = next > 0 ? '' : 'none';
+    nb.onclick = () => playStage(next);
+    elClear.style.display = 'flex';
+  }, 1300);
+}
+document.getElementById('startBtn').addEventListener('click', showSelect);
+document.getElementById('backTitleBtn').addEventListener('click', () => { hideOverlays(); elTitle.style.display = 'flex'; });
+document.getElementById('againBtn').addEventListener('click', () => playStage(stageIdx));
+document.getElementById('clearSelectBtn').addEventListener('click', showSelect);
 document.getElementById('resumeBtn').addEventListener('click', e => { e.stopPropagation(); resumeGame(); });
-elPause.addEventListener('click', resumeGame);
+document.getElementById('retryBtn').addEventListener('click', e => { e.stopPropagation(); pausedAt = 0; respawn(true); startGame(); });
+document.getElementById('toSelectBtn').addEventListener('click', e => { e.stopPropagation(); showSelect(); });
+elPause.addEventListener('click', e => { if (e.target === elPause) resumeGame(); });
 
 // ================= メインループ =================
 let acc = 0, last = performance.now();
@@ -832,10 +1138,11 @@ function frame(t) {
   updateHUD();
   renderer.render(scene, camera);
 }
+buildStage(0); respawn(true);   // タイトルの背景として練習場を出しておく
 requestAnimationFrame(frame);
 
 // デバッグ用（ブラウザのコンソールから確認できるように）
-window.__game = { P, keys, cam, step, startGame };
+window.__game = { P, keys, cam, step, startGame, playStage, STAGES, GOAL, checkpoints: () => checkpoints, best };
 </script>
 </body>
 </html>

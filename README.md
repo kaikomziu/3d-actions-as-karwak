@@ -1,8 +1,9 @@
-# 3D ACTIONS AS KARWAK v1.0.0
+# 3D ACTIONS AS KARWAK v1.1.0
 
 すりーでぃーあくしょんず あず かるわく — three.js の 3D パルクールアクション。
 
 - 遊ぶ: https://kaikomziu.github.io/3d-actions-as-karwak/
+- ステージ: 練習場＋STAGE 1〜5（はじめの一歩／斜めの壁／壁蹴りの塔／ジグザグ渓谷／総仕上げ）。クリアで次が解放、ベストタイムを保存、チェックポイントあり
 - 操作（PC）: WASD 移動、マウスで視点、Shift ダッシュ、Space ジャンプ、Ctrl / C スライディング、R リスタート、Esc 一時停止
 - 操作（スマホ）: 左半分をドラッグで移動、右半分をドラッグで視点、JUMP / SLIDE / DASH ボタン
 - 斜めの壁に向かって歩く → 壁歩き
